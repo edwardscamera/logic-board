@@ -1,0 +1,56 @@
+body {
+    margin: 0px;
+}
+
+html {
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+#buttonContainer {
+    position: absolute;
+    left: 0px;
+    bottom: 0px;
+    
+}
+#buttonContainer > * { user-select: none; }
+#buttonContainer > div {
+    width: 50px;
+    height: 50px;
+    background-color: #7fffd4;
+    float: left;
+    margin: 15px;
+}
+.btn {
+    transition: .3s ease-out;
+    user-select: none;
+    border-radius: 10px;
+}
+.btn:hover {
+    transition: .3s ease-out;
+    transform: scale(1.2);
+}
+.btn:active {
+    transition: .1s ease-out;
+    background-color: #59b697!important;
+    transform: scale(1);
+}
+.buttonSelect {
+    transition: .1s ease-out;
+    background-color: #59b697!important;
+    transform: scale(1)!important;
+}
+#buttonContainer > input[type=number] { margin-top: 25px; }
+
+#fileContainer {
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+}
+#fileContainer > div {
+    width: 100px;
+    height: 25px;
+    margin: 15px;
+    background-color: #7fffd4;
+    text-align: center;
+    line-height: 25px;
+}
