@@ -19,6 +19,9 @@ html {
     background-color: #7fffd4;
     float: left;
     margin: 15px;
+    text-align: center;
+    line-height: 50px;
+    font-family: Arial, Helvetica, sans-serif;
 }
 .btn {
     transition: .3s ease-out;
