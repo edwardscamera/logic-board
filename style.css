@@ -41,7 +41,7 @@ body {
     cursor: default;
 }
 #toolbar > .toolbar-divider {
-    padding: 5px;
+    padding: 0px;
     margin: auto 10px;
     height: 50px;
 

@@ -8,7 +8,7 @@ const canvas = <HTMLCanvasElement>$("canvas");
 const g: CanvasRenderingContext2D = canvas.getContext("2d");
 let tool: string = "INTERACT";
 
-const chips: Chip[] = [];
+let chips: Chip[] = [];
 let selectedOutputChip: Chip = null;
 let selectedBuildChipType: string = "NODE";
 let selectedInputNum: number = 1;
@@ -46,7 +46,7 @@ window.addEventListener("load", () => {
     const chipBtns: HTMLElement[] = [];
     Object.keys(Chip.Chips).forEach(chipType => {
         const chipBtn = document.createElement("span");
-        $("#toolbar").appendChild(chipBtn);
+        $("#toolbar").insertBefore(chipBtn, $("#divider-2"));
         chipBtns.push(chipBtn);
         chipBtn.classList.add("toolbar-btn");
         chipBtn.innerText = chipType;
@@ -60,6 +60,12 @@ window.addEventListener("load", () => {
             
             if (properties.minInputs !== null) selectedInputNum = Math.max(properties.minInputs, selectedInputNum);
             if (properties.maxInputs !== null) selectedInputNum = Math.min(properties.maxInputs, selectedInputNum);
+
+            tool = "DESIGN";
+            toolbarBtns.forEach(toolBtn => {
+                toolBtn.classList.remove("selected");
+                if (toolBtn.getAttribute("toolName") === tool) toolBtn.classList.add("selected");
+            });
         });
     });
 
@@ -279,18 +285,22 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
         return chip.position.x === Math.floor(mousePos.x) && chip.position.y === Math.floor(mousePos.y);
     });
     if (selectedChip) {
-        if (tool === "INTERACT") {
+        if (tool === "INTERACT" && evtMouseUp.button === 0) {
             if (selectedChip.type === "SWITCH") {
                 selectedChip.output = !selectedChip.output;
                 selectedChip.update();
             }
         }
         if (tool === "DESIGN" && evtMouseUp.button === 2) {
-            selectedChip.clean();
+            if (selectedChip.outputChips.length === 0 &&
+                !selectedChip.inputChips.map(x => x ? 1 : 0).includes(1)
+            ) {
+                chips.splice(chips.indexOf(selectedChip), 1);
+            } else selectedChip.clean();
         }
     } else {
         selectedOutputChip = null;
-        if (tool === "DESIGN") {
+        if (tool === "DESIGN" && evtMouseUp.button === 0) {
             const mousePos = Camera.screenToWorld(Input.mousePosition);
             chips.push(new Chip({
                 x: Math.floor(mousePos.x),
@@ -312,4 +322,36 @@ canvas.addEventListener("wheel", (evtWheel: WheelEvent) => {
 });
 canvas.addEventListener("contextmenu", (evtContextMenu: MouseEvent) => {
     evtContextMenu.preventDefault();
+});
+$("#exportBtn").addEventListener("click", () => {
+    const data: string = btoa(JSON.stringify(chips.map(chip => chip.serialize())));
+    if (!navigator.clipboard) return alert(data);
+    navigator.clipboard.writeText(data).then(() => {
+        alert("Copied data!");
+    }, err => {
+        alert("An error occurred. Could not copy data.")
+    });
+});
+$("#importBtn").addEventListener("click", () => {
+    try {
+        const result = JSON.parse(atob(prompt("Enter data: ")));
+        chips = result.map((x: any) => {
+            const newChip = new Chip({
+                x: 0,
+                y: 0,
+            }, "NODE", 0, 0);
+            Object.assign(newChip, x);
+            return newChip;
+        });
+        for(let i = 0; i < chips.length; i++) {
+            for(let j = 0; j < chips[i].outputChips.length; j++) {
+                if (chips[i].outputChips[j].Chip) chips[i].outputChips[j].Chip = chips.find((x: any) => x.ID === chips[i].outputChips[j].Chip);
+            };
+            for(let j = 0; j < chips[i].inputChips.length; j++) {
+                if (chips[i].inputChips[j]) chips[i].inputChips[j] = chips.find((x: any) => x.ID === chips[i].inputChips[j]);
+            };
+        }
+    } catch(e) {
+        alert("An error occurred reading the data.");
+    }
 });

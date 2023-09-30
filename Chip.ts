@@ -54,10 +54,13 @@ export default class Chip {
     color: string = "#aaa";
     
     inputs: boolean[];
-    private inputChips: Chip[];
+    public inputChips: Chip[];
     output: boolean = false;
     public outputChips: ChipInput[] = [];
     public rotation: number;
+
+    private static usedIDs: string[] = [];
+    public readonly ID: string = Chip.generateID();
 
     type: string = null;
 
@@ -143,5 +146,27 @@ export default class Chip {
             x: (this.position.x + .5) + rotatedPoint.x,
             y: (this.position.y + .5) + rotatedPoint.y,
         };
+    }
+    private static generateID(): string {
+        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".split("");
+        let newID = "";
+        do {
+            for(let _ = 0; _ < 10; _++) newID += chars[Math.floor(Math.random() * chars.length)];
+        } while (Chip.usedIDs.includes(newID));
+        Chip.usedIDs.push(newID);
+        return newID;
+    }
+    public serialize(): any {
+        const serialized: any = structuredClone(this);
+        Object.assign(serialized, {
+            inputChips: this.inputChips.map(x => x?.ID),
+        });
+        serialized.outputChips = this.outputChips.map(x => ({
+            Chip: x?.Chip?.ID,
+            InputID: x?.InputID,
+        }));
+        delete serialized.outletSize;
+        delete serialized.output;
+        return serialized;
     }
 }
