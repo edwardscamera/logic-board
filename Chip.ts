@@ -1,3 +1,4 @@
+import Camera from "./Camera.js";
 import ChipInfo from "./ChipInfo.js";
 import ChipInput from "./ChipInput.js";
 import Vector2 from "./Vector2.js";
@@ -56,10 +57,11 @@ export default class Chip {
     private inputChips: Chip[];
     output: boolean = false;
     public outputChips: ChipInput[] = [];
+    public rotation: number;
 
     type: string = null;
 
-    constructor(position: Vector2, type: string, inputs: number) {
+    constructor(position: Vector2, type: string, inputs: number, rotation: number) {
         this.position = position;
         this.type = type.toUpperCase();
 
@@ -71,6 +73,8 @@ export default class Chip {
         this.inputChips = new Array(inputs).fill(null);
 
         this.outletSize = Math.min(0.25, 1 / (inputs + 1));
+
+        this.rotation = rotation;
     }
     public update() {
         // Evaluate inputs
@@ -115,24 +119,29 @@ export default class Chip {
         });
     }
     public getInputPosition(InputID: number, xOffset?: number, yOffset?: number): Vector2 {
-        xOffset = xOffset ?? -1;
-        yOffset = yOffset ?? -1;
-        xOffset = (xOffset + 1) / 2;
-        yOffset = (yOffset + 1) / 2;
-        const widthOfSection = 1 / this.inputs.length;
+        xOffset = xOffset ?? 0;
+        yOffset = yOffset ?? 0;
+        const preRotation: Vector2 = {
+            x: 0 + (xOffset / 2) * this.outletSize + (InputID - this.inputs.length / 2 + .5) / this.inputs.length,
+            y: -.5 + (yOffset / 2) * this.outletSize,
+        };
+        const rotatedPoint = Camera.rotatePoint(preRotation, this.rotation);
         return {
-            x: this.position.x + (InputID * widthOfSection) + (widthOfSection / 2) - (this.outletSize / 2) + (xOffset * this.outletSize),
-            y: this.position.y - this.outletSize + (yOffset * this.outletSize),
+            x: (this.position.x + .5) + rotatedPoint.x,
+            y: (this.position.y + .5) + rotatedPoint.y,
         };
     }
     public getOutputPosition(xOffset?: number, yOffset?: number): Vector2 {
-        xOffset = xOffset ?? -1;
-        yOffset = yOffset ?? -1;
-        xOffset = (xOffset + 1) / 2;
-        yOffset = (yOffset + 1) / 2;
+        xOffset = xOffset ?? 0;
+        yOffset = yOffset ?? 0;
+        const preRotation: Vector2 = {
+            x: 0 + (xOffset / 2) * this.outletSize,
+            y: .5 + (yOffset / 2) * this.outletSize,
+        };
+        const rotatedPoint = Camera.rotatePoint(preRotation, this.rotation);
         return {
-            x: this.position.x + .5 - this.outletSize / 2 + (xOffset * this.outletSize),
-            y: this.position.y + 1 + (yOffset * this.outletSize),
+            x: (this.position.x + .5) + rotatedPoint.x,
+            y: (this.position.y + .5) + rotatedPoint.y,
         };
     }
 }

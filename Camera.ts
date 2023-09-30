@@ -43,4 +43,14 @@ export default class Camera {
             y: this.position.y + centeredPosition.y / this.PPU,
         }
     }
+
+    public static rotatePoint(point: Vector2, angle: number): Vector2 {
+        angle %= Math.PI * 2;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        return {
+            x: (cos * point.x) + (sin * point.y),
+            y: (cos * point.y) - (sin * point.x),
+        };
+    }
 }

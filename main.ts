@@ -1,5 +1,6 @@
 import Camera from "./Camera.js";
 import Chip from "./Chip.js";
+import ChipInput from "./ChipInput.js";
 import Input from "./Input.js";
 
 const $ = (selector: string) => document.querySelector(selector);
@@ -11,6 +12,8 @@ const chips: Chip[] = [];
 let selectedOutputChip: Chip = null;
 let selectedBuildChipType: string = "NODE";
 let selectedInputNum: number = 1;
+let selectedRotation: number = 0;
+let highlightedOutlet: ChipInput | Chip;
 
 window.addEventListener("load", () => {
     const resizeCanvas = () => {
@@ -23,6 +26,12 @@ window.addEventListener("load", () => {
 
     Input.initialize();
     Camera.initialize(canvas);
+
+    // Setup Rotation Listener
+    Input.onKeyPressed("r", () => {
+        selectedRotation += Math.PI / 2;
+        selectedRotation %= Math.PI * 2;
+    });
 
     // Setup Toolbar Buttons
     const toolbarBtns = Array.from($("#toolbar").getElementsByClassName("toolbar-btn"));
@@ -98,11 +107,13 @@ const draw = () => {
     g.scale(Camera.PPU, Camera.PPU);
     g.translate(-Camera.position.x, -Camera.position.y);
 
+    highlightedOutlet = null;
+
     // Draw selected output wire
     if (selectedOutputChip && tool === "WIRE") drawTask.push({
         sort: 4,
         task(g) {
-            const centeredOutputPosition = selectedOutputChip.getOutputPosition(0, 1);
+            const centeredOutputPosition = selectedOutputChip.getOutputPosition(0, 2);
             const mousePos = Camera.screenToWorld(Input.mousePosition);
             g.lineWidth = 1 / 32;
             g.strokeStyle = selectedOutputChip.output ? "#0f0" : "#000";
@@ -119,15 +130,19 @@ const draw = () => {
         drawTask.push({
             sort: 1,
             task(g) {
+                g.save();
+                g.translate(chip.position.x + .5, chip.position.y + .5);
+                g.rotate(chip.rotation);
                 g.fillStyle = chip.color;
-                g.fillRect(chip.position.x, chip.position.y, 1, 1);
+                g.fillRect(-.5, -.5, 1, 1);
+                g.restore();
             },
         });
         
         // Draw Output Wires
-        const centeredOutputPosition = chip.getOutputPosition(0, 1);
+        const centeredOutputPosition = chip.getOutputPosition(0, 2);
         chip.outputChips.forEach(outputChip => {
-            const centeredInputPosition = outputChip.Chip.getInputPosition(outputChip.InputID, 0, -1);
+            const centeredInputPosition = outputChip.Chip.getInputPosition(outputChip.InputID, 0, -2);
             drawTask.push({
                 sort: 0,
                 task(g) {
@@ -146,16 +161,43 @@ const draw = () => {
             task(g) {
                 // Draw Inputs
                 chip.inputs.forEach((input, i) => {
+                    const inputPosition = chip.getInputPosition(i, 0, -1);
                     g.fillStyle = input ? "#0f0" : "#aaa";
-
-                    const inputPosition = chip.getInputPosition(i);
-                    g.fillRect(inputPosition.x, inputPosition.y, chip.outletSize, chip.outletSize);
+                    if (tool === "WIRE" && selectedOutputChip && Input.mouseIn(
+                        inputPosition.x - chip.outletSize / 2,
+                        inputPosition.y - chip.outletSize / 2,
+                        chip.outletSize, chip.outletSize
+                    )) {
+                        g.fillStyle = "#ff0";
+                        highlightedOutlet = {
+                            Chip: chip,
+                            InputID: i,
+                        };
+                    }
+                    
+                    g.fillRect(
+                        inputPosition.x - chip.outletSize / 2,
+                        inputPosition.y - chip.outletSize / 2,
+                        chip.outletSize, chip.outletSize
+                    );
                 });
 
                 // Draw Output
                 g.fillStyle = chip.output ? "#0f0" : "#aaa";
-                const outputPosition = chip.getOutputPosition();
-                g.fillRect(outputPosition.x, outputPosition.y, chip.outletSize, chip.outletSize);
+                const outputPosition = chip.getOutputPosition(0, 1);
+                if (tool === "WIRE" && !selectedOutputChip && Input.mouseIn(
+                    outputPosition.x - chip.outletSize / 2,
+                    outputPosition.y - chip.outletSize / 2,
+                    chip.outletSize, chip.outletSize
+                )) {
+                    g.fillStyle = "#ff0";
+                    highlightedOutlet = chip;
+                }
+                g.fillRect(
+                    outputPosition.x - chip.outletSize / 2,
+                    outputPosition.y - chip.outletSize / 2,
+                    chip.outletSize, chip.outletSize
+                );
             },
         });
         
@@ -164,9 +206,13 @@ const draw = () => {
         drawTask.push({
             sort: 2,
             task(g) {
+                g.save();
+                g.translate(chip.position.x + .5, chip.position.y + .5);
+                g.rotate(chip.rotation);
                 g.font = "bold 1px consolas";
                 g.fillStyle = "#000";
-                g.fillText(chip.type, chip.position.x, chip.position.y + 1, 1);
+                g.fillText(chip.type, -.5, -.5 + 1, 1);
+                g.restore();
             },
         });
     });
@@ -175,22 +221,27 @@ const draw = () => {
     if (tool === "DESIGN") drawTask.push({
         sort: 3,
         task(g) {
-            g.globalAlpha = 0.5;
-            const chipProperties = Chip.Chips[selectedBuildChipType];
+            g.save();
             const mousePos = Camera.screenToWorld(Input.mousePosition);
+            g.translate(Math.floor(mousePos.x) + .5, Math.floor(mousePos.y) + .5);
+            g.rotate(selectedRotation);
+            g.globalAlpha = 0.5;
+
+            const chipProperties = Chip.Chips[selectedBuildChipType];
             g.fillStyle = chipProperties.color ?? "#aaa";
-            g.fillRect(Math.floor(mousePos.x), Math.floor(mousePos.y), 1, 1);
+            g.fillRect(-.5, -.5, 1, 1);
     
             // Draw Label
             g.font = "bold 1px consolas";
             g.fillStyle = "#000";
-            g.fillText(selectedBuildChipType, Math.floor(mousePos.x), Math.floor(mousePos.y) + 1, 1);
+            g.fillText(selectedBuildChipType, -.5, -.5 + 1, 1);
 
             // Draw Input Label
             g.font = `bold 0.5px consolas`;
-            g.fillText(selectedInputNum.toString(), Math.floor(mousePos.x) + .5 - g.measureText(selectedInputNum.toString()).width / 2, Math.floor(mousePos.y), 1);
+            g.fillText(selectedInputNum.toString(), -.5 + .5 - g.measureText(selectedInputNum.toString()).width / 2, -.5, 1);
 
             g.globalAlpha = 1;
+            g.restore();
         },
     });
 
@@ -214,7 +265,16 @@ canvas.addEventListener("mousedown", (evtMouseDown: MouseEvent) => {
     }
 });
 canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
-    const mousePos = Camera.screenToWorld(Input.mousePosition);
+    if (tool === "WIRE") {
+        if (!selectedOutputChip) selectedOutputChip = <Chip>highlightedOutlet;
+        else {
+            selectedOutputChip.setOutput(<ChipInput>highlightedOutlet);
+            if (!Input.keyDown["Shift"]) selectedOutputChip = null;
+        }
+        return;
+    }
+
+    const mousePos = Camera.screenToWorld(Input.mousePosition);    
     const selectedChip: Chip = chips.find(chip => {
         return chip.position.x === Math.floor(mousePos.x) && chip.position.y === Math.floor(mousePos.y);
     });
@@ -223,24 +283,6 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
             if (selectedChip.type === "SWITCH") {
                 selectedChip.output = !selectedChip.output;
                 selectedChip.update();
-            }
-        }
-        if (tool === "WIRE") {
-            if (!selectedOutputChip) selectedOutputChip = selectedChip;
-            else {
-                const distances = selectedChip.inputs.map((value, i) => {
-                    const inputPos = selectedChip.getInputPosition(i);
-                    return {
-                        value: value,
-                        InputID: i,
-                        distance: Math.sqrt((inputPos.x - mousePos.x) ** 2 + (inputPos.y - mousePos.y) ** 2)
-                    };
-                }).sort((a, b) => a.distance - b.distance);
-                selectedOutputChip.setOutput({
-                    Chip: selectedChip,
-                    InputID: distances[0].InputID,
-                });
-                if (!Input.keyDown["Shift"]) selectedOutputChip = null;
             }
         }
         if (tool === "DESIGN" && evtMouseUp.button === 2) {
@@ -253,13 +295,14 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
             chips.push(new Chip({
                 x: Math.floor(mousePos.x),
                 y: Math.floor(mousePos.y),
-            }, selectedBuildChipType, selectedInputNum));
-        }
+            }, selectedBuildChipType, selectedInputNum, selectedRotation));
+        }   
     }
+    
 });
 canvas.addEventListener("wheel", (evtWheel: WheelEvent) => {
-    if (tool === "DESIGN") {
-        selectedInputNum += Math.sign(evtWheel.deltaY);
+    if (tool === "DESIGN" && !Input.keyDown["Shift"]) {
+        selectedInputNum += -Math.sign(evtWheel.deltaY);
         const properties = Chip.Chips[selectedBuildChipType];
         if (properties.minInputs !== null) selectedInputNum = Math.max(properties.minInputs, selectedInputNum);
         if (properties.maxInputs !== null) selectedInputNum = Math.min(properties.maxInputs, selectedInputNum);
