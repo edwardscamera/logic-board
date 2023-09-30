@@ -72,6 +72,10 @@ window.addEventListener("load", () => {
     window.requestAnimationFrame(draw);
 });
 const draw = () => {
+    const drawTask: {
+        sort: number;
+        task(g: CanvasRenderingContext2D): void;
+    }[] = [];
     // Setup
     g.resetTransform();
     g.imageSmoothingEnabled = false;
@@ -110,68 +114,99 @@ const draw = () => {
     g.translate(-Camera.position.x, -Camera.position.y);
 
     // Draw selected output wire
-    if (selectedOutputChip && tool === "WIRE") {
-        const centeredOutputPosition = selectedOutputChip.getOutputPosition(true);
-        const mousePos = Camera.screenToWorld(Mouse.position);
-        g.lineWidth = 1 / 32;
-        g.strokeStyle = selectedOutputChip.output ? "#0f0" : "#000";
-        g.beginPath();
-        g.moveTo(centeredOutputPosition.x, centeredOutputPosition.y);
-        g.lineTo(mousePos.x, mousePos.y);
-        g.stroke();
-    }
+    if (selectedOutputChip && tool === "WIRE") drawTask.push({
+        sort: 4,
+        task(g) {
+            const centeredOutputPosition = selectedOutputChip.getOutputPosition(0, 1);
+            const mousePos = Camera.screenToWorld(Mouse.position);
+            g.lineWidth = 1 / 32;
+            g.strokeStyle = selectedOutputChip.output ? "#0f0" : "#000";
+            g.beginPath();
+            g.moveTo(centeredOutputPosition.x, centeredOutputPosition.y);
+            g.lineTo(mousePos.x, mousePos.y);
+            g.stroke();
+        },
+    });
 
     // Draw Chips
     chips.forEach(chip => {
         // Draw Chip
-        g.fillStyle = chip.color;
-        g.fillRect(chip.position.x, chip.position.y, 1, 1);
-
+        drawTask.push({
+            sort: 1,
+            task(g) {
+                g.fillStyle = chip.color;
+                g.fillRect(chip.position.x, chip.position.y, 1, 1);
+            },
+        });
+        
         // Draw Output Wires
-        const centeredOutputPosition = chip.getOutputPosition(true);
+        const centeredOutputPosition = chip.getOutputPosition(0, 1);
         chip.outputChips.forEach(outputChip => {
-            const centeredInputPosition = outputChip.Chip.getInputPosition(outputChip.InputID, true);
-            g.lineWidth = 1 / 32;
-            g.strokeStyle = chip.output ? "#0f0" : "#000";
-            g.beginPath();
-            g.moveTo(centeredOutputPosition.x, centeredOutputPosition.y);
-            g.lineTo(centeredInputPosition.x, centeredInputPosition.y);
-            g.stroke();
+            const centeredInputPosition = outputChip.Chip.getInputPosition(outputChip.InputID, 0, -1);
+            drawTask.push({
+                sort: 0,
+                task(g) {
+                    g.lineWidth = 1 / 32;
+                    g.strokeStyle = chip.output ? "#0f0" : "#000";
+                    g.beginPath();
+                    g.moveTo(centeredOutputPosition.x, centeredOutputPosition.y);
+                    g.lineTo(centeredInputPosition.x, centeredInputPosition.y);
+                    g.stroke();
+                }
+            });
         });
 
-        // Draw Inputs
-        chip.inputs.forEach((input, i) => {
-            g.fillStyle = input ? "#0f0" : "#aaa";
+        drawTask.push({
+            sort: 1,
+            task(g) {
+                // Draw Inputs
+                chip.inputs.forEach((input, i) => {
+                    g.fillStyle = input ? "#0f0" : "#aaa";
 
-            const inputPosition = chip.getInputPosition(i);
-            g.fillRect(inputPosition.x, inputPosition.y, Chip.outletSize, Chip.outletSize);
+                    const inputPosition = chip.getInputPosition(i);
+                    g.fillRect(inputPosition.x, inputPosition.y, Chip.outletSize, Chip.outletSize);
+                });
+
+                // Draw Output
+                g.fillStyle = chip.output ? "#0f0" : "#aaa";
+                const outputPosition = chip.getOutputPosition();
+                g.fillRect(outputPosition.x, outputPosition.y, Chip.outletSize, Chip.outletSize);
+            },
         });
-
-        // Draw Output
-        g.fillStyle = chip.output ? "#0f0" : "#aaa";
-        const outputPosition = chip.getOutputPosition();
-        g.fillRect(outputPosition.x, outputPosition.y, Chip.outletSize, Chip.outletSize);
+        
 
         // Draw Label
-        g.font = "bold 1px consolas";
-        g.fillStyle = "#000";
-        g.fillText(chip.type, chip.position.x, chip.position.y + 1, 1);
+        drawTask.push({
+            sort: 2,
+            task(g) {
+                g.font = "bold 1px consolas";
+                g.fillStyle = "#000";
+                g.fillText(chip.type, chip.position.x, chip.position.y + 1, 1);
+            },
+        });
     });
 
     // Ghost Design
-    if (tool === "DESIGN") {
-        const chipProperties = Chip.Chips[selectedBuildChipType];
-        const mousePos = Camera.screenToWorld(Mouse.position);
-        g.fillStyle = chipProperties.color ?? "#aaa";
-        g.fillRect(Math.floor(mousePos.x), Math.floor(mousePos.y), 1, 1);
+    if (tool === "DESIGN") drawTask.push({
+        sort: 3,
+        task(g) {
+            const chipProperties = Chip.Chips[selectedBuildChipType];
+            const mousePos = Camera.screenToWorld(Mouse.position);
+            g.fillStyle = chipProperties.color ?? "#aaa";
+            g.fillRect(Math.floor(mousePos.x), Math.floor(mousePos.y), 1, 1);
+    
+            // Draw Label
+            g.globalAlpha = 0.2;
+            g.font = "bold 1px consolas";
+            g.fillStyle = "#000";
+            g.fillText(selectedBuildChipType, Math.floor(mousePos.x), Math.floor(mousePos.y) + 1, 1);
+            g.globalAlpha = 1;
+        },
+    });
 
-        // Draw Label
-        g.globalAlpha = 0.2;
-        g.font = "bold 1px consolas";
-        g.fillStyle = "#000";
-        g.fillText(selectedBuildChipType, Math.floor(mousePos.x), Math.floor(mousePos.y) + 1, 1);
-        g.globalAlpha = 1;
-    }
+    drawTask.sort((a, b) => (a.sort - b.sort)).forEach(task => {
+        task.task(g);
+    });
 
     window.requestAnimationFrame(draw);
 };
@@ -204,7 +239,7 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
             if (!selectedOutputChip) selectedOutputChip = selectedChip;
             else {
                 const distances = selectedChip.inputs.map((value, i) => {
-                    const inputPos = selectedChip.getInputPosition(i, true);
+                    const inputPos = selectedChip.getInputPosition(i);
                     return {
                         value: value,
                         InputID: i,

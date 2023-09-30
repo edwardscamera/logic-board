@@ -103,17 +103,25 @@ export default class Chip {
             }
         });
     }
-    public getInputPosition(InputID: number, centered?: boolean): Vector2 {
+    public getInputPosition(InputID: number, xOffset?: number, yOffset?: number): Vector2 {
+        xOffset = xOffset ?? -1;
+        yOffset = yOffset ?? -1;
+        xOffset = (xOffset + 1) / 2;
+        yOffset = (yOffset + 1) / 2;
         const widthOfSection = 1 / this.inputs.length;
         return {
-            x: this.position.x + (InputID * widthOfSection) + (widthOfSection / 2) - (Chip.outletSize / 2) + (centered ? Chip.outletSize / 2 : 0),
-            y: this.position.y - Chip.outletSize + (centered ? Chip.outletSize / 2 : 0),
+            x: this.position.x + (InputID * widthOfSection) + (widthOfSection / 2) - (Chip.outletSize / 2) + (xOffset * Chip.outletSize),
+            y: this.position.y - Chip.outletSize + (yOffset * Chip.outletSize),
         };
     }
-    public getOutputPosition(centered?: boolean): Vector2 {
+    public getOutputPosition(xOffset?: number, yOffset?: number): Vector2 {
+        xOffset = xOffset ?? -1;
+        yOffset = yOffset ?? -1;
+        xOffset = (xOffset + 1) / 2;
+        yOffset = (yOffset + 1) / 2;
         return {
-            x: this.position.x + .5 - Chip.outletSize / 2 + (centered ? Chip.outletSize / 2 : 0),
-            y: this.position.y + 1 + (centered ? Chip.outletSize / 2 : 0),
+            x: this.position.x + .5 - Chip.outletSize / 2 + (xOffset * Chip.outletSize),
+            y: this.position.y + 1 + (yOffset * Chip.outletSize),
         };
     }
 }
