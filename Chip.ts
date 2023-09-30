@@ -22,6 +22,12 @@ export default class Chip {
                 return inputs.includes(true);
             },
         },
+        "XOR": {
+            inputs: 2,
+            evaluate: (inputs) => {
+                return inputs.includes(true) && inputs.includes(false);
+            },
+        },
         "NODE": {
             inputs: 1,
             evaluate: (inputs) => {
