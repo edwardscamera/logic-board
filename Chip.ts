@@ -5,40 +5,46 @@ import Vector2 from "./Vector2.js";
 export default class Chip {
     public static Chips: Record<string, ChipInfo> = {
         "NOT": {
-            inputs: 1,
+            minInputs: 1,
+            maxInputs: 1,
             evaluate: (inputs) => {
                 return !inputs[0];
             },
         },
         "AND": {
-            inputs: 2,
+            minInputs: 2,
+            maxInputs: null,
             evaluate: (inputs) => {
                 return !inputs.includes(false)
             },
         },
         "OR": {
-            inputs: 2,
+            minInputs: 2,
+            maxInputs: null,
             evaluate: (inputs) => {
                 return inputs.includes(true);
             },
         },
         "XOR": {
-            inputs: 2,
+            minInputs: 2,
+            maxInputs: null,
             evaluate: (inputs) => {
                 return inputs.includes(true) && inputs.includes(false);
             },
         },
         "NODE": {
-            inputs: 1,
+            minInputs: 1,
+            maxInputs: 1,
             evaluate: (inputs) => {
                 return inputs[0];
             },
         },
         "SWITCH": {
-            inputs: 0,
+            minInputs: 0,
+            maxInputs: 0,
         }
     }
-    public static outletSize = 0.25;
+    public outletSize = 0.25;
 
     position: Vector2 = {
         x: 0,
@@ -53,13 +59,18 @@ export default class Chip {
 
     type: string = null;
 
-    constructor(position: Vector2, type: string) {
+    constructor(position: Vector2, type: string, inputs: number) {
         this.position = position;
         this.type = type.toUpperCase();
 
         const chipProperties: ChipInfo = Chip.Chips[this.type];
-        this.inputs = new Array(chipProperties.inputs).fill(false);
-        this.inputChips = new Array(chipProperties.inputs).fill(null);
+
+        if (chipProperties.minInputs !== null) inputs = Math.max(inputs, chipProperties.minInputs);
+        if (chipProperties.maxInputs !== null) inputs = Math.min(inputs, chipProperties.maxInputs);
+        this.inputs = new Array(inputs).fill(false);
+        this.inputChips = new Array(inputs).fill(null);
+
+        this.outletSize = Math.min(0.25, 1 / (inputs + 1));
     }
     public update() {
         // Evaluate inputs
@@ -110,8 +121,8 @@ export default class Chip {
         yOffset = (yOffset + 1) / 2;
         const widthOfSection = 1 / this.inputs.length;
         return {
-            x: this.position.x + (InputID * widthOfSection) + (widthOfSection / 2) - (Chip.outletSize / 2) + (xOffset * Chip.outletSize),
-            y: this.position.y - Chip.outletSize + (yOffset * Chip.outletSize),
+            x: this.position.x + (InputID * widthOfSection) + (widthOfSection / 2) - (this.outletSize / 2) + (xOffset * this.outletSize),
+            y: this.position.y - this.outletSize + (yOffset * this.outletSize),
         };
     }
     public getOutputPosition(xOffset?: number, yOffset?: number): Vector2 {
@@ -120,8 +131,8 @@ export default class Chip {
         xOffset = (xOffset + 1) / 2;
         yOffset = (yOffset + 1) / 2;
         return {
-            x: this.position.x + .5 - Chip.outletSize / 2 + (xOffset * Chip.outletSize),
-            y: this.position.y + 1 + (yOffset * Chip.outletSize),
+            x: this.position.x + .5 - this.outletSize / 2 + (xOffset * this.outletSize),
+            y: this.position.y + 1 + (yOffset * this.outletSize),
         };
     }
 }

@@ -1,5 +1,6 @@
 export default interface ChipInfo {
-    inputs: number;
+    minInputs: number;
+    maxInputs: number;
     evaluate?(inputs: boolean[]): boolean;
     color?: string;
 }
