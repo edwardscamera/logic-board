@@ -1,6 +1,7 @@
 import Camera from "./Camera.js";
 import Chip from "./Chip.js";
 import ChipInput from "./ChipInput.js";
+import Board from "./Board.js";
 import Input from "./Input.js";
 
 const $ = (selector: string) => document.querySelector(selector);
@@ -8,7 +9,10 @@ const canvas = <HTMLCanvasElement>$("canvas");
 const g: CanvasRenderingContext2D = canvas.getContext("2d");
 let tool: string = "INTERACT";
 
-let chips: Chip[] = [];
+let MAIN_BOARD = new Board(null);
+
+let currentBoard = MAIN_BOARD;
+
 let selectedOutputChip: Chip = null;
 let selectedBuildChipType: string = "NODE";
 let selectedInputNum: number = 1;
@@ -34,7 +38,7 @@ window.addEventListener("load", () => {
     });
 
     // Setup Toolbar Buttons
-    const toolbarBtns = Array.from($("#toolbar").getElementsByClassName("toolbar-btn"));
+    const toolbarBtns = Array.from($("#toolbar").getElementsByClassName("tool-toggle"));
     toolbarBtns.forEach(toolBtn => {
         if (toolBtn.getAttribute("toolName") === tool) toolBtn.classList.add("selected");
         toolBtn.addEventListener("click", () => {
@@ -48,10 +52,11 @@ window.addEventListener("load", () => {
         const chipBtn = document.createElement("span");
         $("#toolbar").insertBefore(chipBtn, $("#divider-2"));
         chipBtns.push(chipBtn);
-        chipBtn.classList.add("toolbar-btn");
+        chipBtn.classList.add("toolbar-btn", "chip");
         chipBtn.innerText = chipType;
         if (chipType === selectedBuildChipType) chipBtn.classList.add("selected");
         chipBtn.addEventListener("click", () => {
+            const chipBtns = Array.from(document.getElementsByClassName("chip"));
             chipBtns.forEach(btn => btn.classList.remove("selected"));
             chipBtn.classList.add("selected");
             selectedBuildChipType = chipType;
@@ -72,14 +77,19 @@ window.addEventListener("load", () => {
     window.requestAnimationFrame(draw);
 });
 const draw = () => {
+    // Setup
     const drawTask: {
         sort: number;
         task(g: CanvasRenderingContext2D): void;
     }[] = [];
-    // Setup
     g.resetTransform();
     g.imageSmoothingEnabled = false;
     g.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Text
+    g.fillStyle = "#000";
+    g.font = "bold 24px consolas";
+    if (currentBoard.name) g.fillText(currentBoard.name, 24, canvas.height - 24);
 
     g.translate(canvas.width / 2, canvas.height / 2);
 
@@ -131,7 +141,7 @@ const draw = () => {
     });
 
     // Draw Chips
-    chips.forEach(chip => {
+    currentBoard.chips.forEach(chip => {
         // Draw Chip
         drawTask.push({
             sort: 1,
@@ -281,7 +291,7 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
     }
 
     const mousePos = Camera.screenToWorld(Input.mousePosition);    
-    const selectedChip: Chip = chips.find(chip => {
+    const selectedChip: Chip = currentBoard.chips.find(chip => {
         return chip.position.x === Math.floor(mousePos.x) && chip.position.y === Math.floor(mousePos.y);
     });
     if (selectedChip) {
@@ -295,14 +305,14 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
             if (selectedChip.outputChips.length === 0 &&
                 !selectedChip.inputChips.map(x => x ? 1 : 0).includes(1)
             ) {
-                chips.splice(chips.indexOf(selectedChip), 1);
+                currentBoard.chips.splice(currentBoard.chips.indexOf(selectedChip), 1);
             } else selectedChip.clean();
         }
     } else {
         selectedOutputChip = null;
         if (tool === "DESIGN" && evtMouseUp.button === 0) {
             const mousePos = Camera.screenToWorld(Input.mousePosition);
-            chips.push(new Chip({
+            currentBoard.chips.push(new Chip({
                 x: Math.floor(mousePos.x),
                 y: Math.floor(mousePos.y),
             }, selectedBuildChipType, selectedInputNum, selectedRotation));
@@ -324,18 +334,19 @@ canvas.addEventListener("contextmenu", (evtContextMenu: MouseEvent) => {
     evtContextMenu.preventDefault();
 });
 $("#exportBtn").addEventListener("click", () => {
-    const data: string = btoa(JSON.stringify(chips.map(chip => chip.serialize())));
+    const data: string = btoa(JSON.stringify(currentBoard.chips.map(chip => chip.serialize())));
     if (!navigator.clipboard) return alert(data);
     navigator.clipboard.writeText(data).then(() => {
         alert("Copied data!");
     }, err => {
-        alert("An error occurred. Could not copy data.")
+        alert("An error occurred. Could not copy data.");
     });
 });
 $("#importBtn").addEventListener("click", () => {
     try {
         const result = JSON.parse(atob(prompt("Enter data: ")));
-        chips = result.map((x: any) => {
+        const importedBoard = new Board("Imported Board");
+        importedBoard.chips = result.map((x: any) => {
             const newChip = new Chip({
                 x: 0,
                 y: 0,
@@ -343,15 +354,63 @@ $("#importBtn").addEventListener("click", () => {
             Object.assign(newChip, x);
             return newChip;
         });
-        for(let i = 0; i < chips.length; i++) {
-            for(let j = 0; j < chips[i].outputChips.length; j++) {
-                if (chips[i].outputChips[j].Chip) chips[i].outputChips[j].Chip = chips.find((x: any) => x.ID === chips[i].outputChips[j].Chip);
+        for(let i = 0; i < currentBoard.chips.length; i++) {
+            for(let j = 0; j < currentBoard.chips[i].outputChips.length; j++) {
+                if (currentBoard.chips[i].outputChips[j].Chip) currentBoard.chips[i].outputChips[j].Chip = currentBoard.chips.find((x: any) => x.ID === currentBoard.chips[i].outputChips[j].Chip);
             };
-            for(let j = 0; j < chips[i].inputChips.length; j++) {
-                if (chips[i].inputChips[j]) chips[i].inputChips[j] = chips.find((x: any) => x.ID === chips[i].inputChips[j]);
+            for(let j = 0; j < currentBoard.chips[i].inputChips.length; j++) {
+                if (currentBoard.chips[i].inputChips[j]) currentBoard.chips[i].inputChips[j] = currentBoard.chips.find((x: any) => x.ID === currentBoard.chips[i].inputChips[j]);
             };
         }
     } catch(e) {
         alert("An error occurred reading the data.");
     }
+});
+$("#addBtn").addEventListener("click", () => {
+    const newBoard = new Board(prompt("Enter board name: "));
+    currentBoard = newBoard;
+    (<HTMLSpanElement>$("#backBtn")).style.display = "block";
+    Chip.Chips[newBoard.name] = {
+        minInputs: 2,
+        maxInputs: 2,
+        color: "#aaa",
+    };
+
+    const toolbarBtns = Array.from($("#toolbar").getElementsByClassName("tool-toggle"));
+    const chipBtns = Array.from(document.getElementsByClassName("chip"));
+
+    const chipBtn = document.createElement("span");
+    $("#toolbar").insertBefore(chipBtn, $("#divider-2"));
+    chipBtn.classList.add("toolbar-btn", "chip");
+    
+    const label = document.createElement("span");
+    label.innerText = newBoard.name;
+    const edit = document.createElement("button");
+    edit.innerText = "Edit";
+    edit.addEventListener("click", () => {
+        currentBoard = newBoard;
+        (<HTMLSpanElement>$("#backBtn")).style.display = "block";
+    });
+    chipBtn.append(label, edit);
+
+    chipBtn.addEventListener("click", () => {
+        chipBtns.forEach(btn => btn.classList.remove("selected"));
+        chipBtn.classList.add("selected");
+        selectedBuildChipType = newBoard.name;
+
+        const properties = Chip.Chips[newBoard.name];
+        
+        if (properties.minInputs !== null) selectedInputNum = Math.max(properties.minInputs, selectedInputNum);
+        if (properties.maxInputs !== null) selectedInputNum = Math.min(properties.maxInputs, selectedInputNum);
+
+        tool = "DESIGN";
+        toolbarBtns.forEach(toolBtn => {
+            toolBtn.classList.remove("selected");
+            if (toolBtn.getAttribute("toolName") === tool) toolBtn.classList.add("selected");
+        });
+    });
+});
+$("#backBtn").addEventListener("click", () => {
+    currentBoard = MAIN_BOARD;
+    (<HTMLSpanElement>$("#backBtn")).style.display = "none";
 });

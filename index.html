@@ -9,13 +9,15 @@
 <body>
     <canvas></canvas>
     <div id="toolbar">
-        <span class="toolbar-btn" toolName="INTERACT">Interact</span>
-        <span class="toolbar-btn" toolName="DESIGN">Design</span>
-        <span class="toolbar-btn" toolName="WIRE">Wire</span>
-        <span class="toolbar-divider"></span>
+        <span class="toolbar-btn tool-toggle" toolName="INTERACT">Interact</span>
+        <span class="toolbar-btn tool-toggle" toolName="DESIGN">Design</span>
+        <span class="toolbar-btn tool-toggle" toolName="WIRE">Wire</span>
+        <span class="toolbar-divider" id="divider-1"></span>
+        <span class="toolbar-btn" id="addBtn">+</span>
         <span class="toolbar-divider" id="divider-2"></span>
         <span class="toolbar-btn" id="exportBtn">Export</span>
         <span class="toolbar-btn" id="importBtn">Import</span>
+        <span class="toolbar-btn" id="backBtn">Back</span>
     </div>
     <script src="./main.js" type="module"></script>
 </body>
