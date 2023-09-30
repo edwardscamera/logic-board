@@ -1,6 +1,6 @@
 import Camera from "./Camera.js";
 import Chip from "./Chip.js";
-import Mouse from "./Mouse.js";
+import Input from "./Input.js";
 
 const $ = (selector: string) => document.querySelector(selector);
 const canvas = <HTMLCanvasElement>$("canvas");
@@ -21,7 +21,7 @@ window.addEventListener("load", () => {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    Mouse.initialize();
+    Input.initialize();
     Camera.initialize(canvas);
 
     // Setup Toolbar Buttons
@@ -103,7 +103,7 @@ const draw = () => {
         sort: 4,
         task(g) {
             const centeredOutputPosition = selectedOutputChip.getOutputPosition(0, 1);
-            const mousePos = Camera.screenToWorld(Mouse.position);
+            const mousePos = Camera.screenToWorld(Input.mousePosition);
             g.lineWidth = 1 / 32;
             g.strokeStyle = selectedOutputChip.output ? "#0f0" : "#000";
             g.beginPath();
@@ -177,7 +177,7 @@ const draw = () => {
         task(g) {
             g.globalAlpha = 0.5;
             const chipProperties = Chip.Chips[selectedBuildChipType];
-            const mousePos = Camera.screenToWorld(Mouse.position);
+            const mousePos = Camera.screenToWorld(Input.mousePosition);
             g.fillStyle = chipProperties.color ?? "#aaa";
             g.fillRect(Math.floor(mousePos.x), Math.floor(mousePos.y), 1, 1);
     
@@ -214,7 +214,7 @@ canvas.addEventListener("mousedown", (evtMouseDown: MouseEvent) => {
     }
 });
 canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
-    const mousePos = Camera.screenToWorld(Mouse.position);
+    const mousePos = Camera.screenToWorld(Input.mousePosition);
     const selectedChip: Chip = chips.find(chip => {
         return chip.position.x === Math.floor(mousePos.x) && chip.position.y === Math.floor(mousePos.y);
     });
@@ -239,7 +239,8 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
                 selectedOutputChip.setOutput({
                     Chip: selectedChip,
                     InputID: distances[0].InputID,
-                })
+                });
+                if (!Input.keyDown["Shift"]) selectedOutputChip = null;
             }
         }
         if (tool === "DESIGN" && evtMouseUp.button === 2) {
@@ -248,7 +249,7 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
     } else {
         selectedOutputChip = null;
         if (tool === "DESIGN") {
-            const mousePos = Camera.screenToWorld(Mouse.position);
+            const mousePos = Camera.screenToWorld(Input.mousePosition);
             chips.push(new Chip({
                 x: Math.floor(mousePos.x),
                 y: Math.floor(mousePos.y),
@@ -263,7 +264,7 @@ canvas.addEventListener("wheel", (evtWheel: WheelEvent) => {
         if (properties.minInputs !== null) selectedInputNum = Math.max(properties.minInputs, selectedInputNum);
         if (properties.maxInputs !== null) selectedInputNum = Math.min(properties.maxInputs, selectedInputNum);
     } else {
-        Camera.zoomAtPosition(-Math.sign(evtWheel.deltaY), Camera.screenToWorld(Mouse.position));
+        Camera.zoomAtPosition(-Math.sign(evtWheel.deltaY), Camera.screenToWorld(Input.mousePosition));
     }
 });
 canvas.addEventListener("contextmenu", (evtContextMenu: MouseEvent) => {
