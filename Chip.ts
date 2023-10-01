@@ -11,6 +11,7 @@ export default class Chip {
             evaluate: (inputs) => {
                 return !inputs[0];
             },
+            icon: "./img/not.png",
         },
         "AND": {
             minInputs: 2,
@@ -18,6 +19,7 @@ export default class Chip {
             evaluate: (inputs) => {
                 return !inputs.includes(false)
             },
+            icon: "./img/and.png",
         },
         "OR": {
             minInputs: 2,
@@ -25,6 +27,7 @@ export default class Chip {
             evaluate: (inputs) => {
                 return inputs.includes(true);
             },
+            icon: "./img/or.png",
         },
         "XOR": {
             minInputs: 2,
@@ -32,6 +35,7 @@ export default class Chip {
             evaluate: (inputs) => {
                 return inputs.includes(true) && inputs.includes(false);
             },
+            icon: "./img/xor.png",
         },
         "NODE": {
             minInputs: 1,
@@ -119,6 +123,7 @@ export default class Chip {
             if (chip) {
                 const c = chip.outputChips.find(x => x.Chip === this);
                 if (c) chip.outputChips.splice(chip.outputChips.indexOf(c), 1);
+                this.inputChips[this.inputChips.indexOf(chip)] = null;
             }
         });
     }

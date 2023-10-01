@@ -33,6 +33,9 @@ body {
 
     user-select: none;
 }
+#toolbar > .toolbar-btn > img {
+    filter: invert(1);
+}
 #toolbar > .toolbar-btn:hover {
     background-color: #eee;
 }

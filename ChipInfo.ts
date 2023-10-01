@@ -3,4 +3,6 @@ export default interface ChipInfo {
     maxInputs: number;
     evaluate?(inputs: boolean[]): boolean;
     color?: string;
+    icon?: string;
+    iconElm?: HTMLImageElement;
 }

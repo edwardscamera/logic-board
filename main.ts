@@ -18,6 +18,7 @@ let selectedBuildChipType: string = "NODE";
 let selectedInputNum: number = 1;
 let selectedRotation: number = 0;
 let highlightedOutlet: ChipInput | Chip;
+let draggedChip: Chip = null;
 
 window.addEventListener("load", () => {
     const resizeCanvas = () => {
@@ -33,8 +34,14 @@ window.addEventListener("load", () => {
 
     // Setup Rotation Listener
     Input.onKeyPressed("r", () => {
-        selectedRotation += Math.PI / 2;
-        selectedRotation %= Math.PI * 2;
+        if (tool === "DESIGN") {
+            selectedRotation += Math.PI / 2;
+            selectedRotation %= Math.PI * 2;
+        }
+        if (draggedChip) {
+            draggedChip.rotation += Math.PI / 2;
+            draggedChip.rotation %= Math.PI * 2;
+        }
     });
 
     // Setup Toolbar Buttons
@@ -49,11 +56,12 @@ window.addEventListener("load", () => {
     });
     const chipBtns: HTMLElement[] = [];
     Object.keys(Chip.Chips).forEach(chipType => {
+        const properties = Chip.Chips[chipType];
         const chipBtn = document.createElement("span");
         $("#toolbar").insertBefore(chipBtn, $("#divider-2"));
         chipBtns.push(chipBtn);
         chipBtn.classList.add("toolbar-btn", "chip");
-        chipBtn.innerText = chipType;
+        chipBtn.innerHTML = properties.icon ? `<img src="${properties.icon}">` : chipType.toUpperCase();
         if (chipType === selectedBuildChipType) chipBtn.classList.add("selected");
         chipBtn.addEventListener("click", () => {
             const chipBtns = Array.from(document.getElementsByClassName("chip"));
@@ -225,12 +233,21 @@ const draw = () => {
         drawTask.push({
             sort: 2,
             task(g) {
+                const properties = Chip.Chips[chip.type];
                 g.save();
                 g.translate(chip.position.x + .5, chip.position.y + .5);
                 g.rotate(chip.rotation);
-                g.font = "bold 1px consolas";
-                g.fillStyle = "#000";
-                g.fillText(chip.type, -.5, -.5 + 1, 1);
+                if (properties.icon) {
+                    if (!properties.iconElm) {
+                        properties.iconElm = document.createElement("img");
+                        properties.iconElm.src = properties.icon;
+                    }
+                    g.drawImage(properties.iconElm, -.5, -.5, 1, 1);
+                } else {
+                    g.font = "bold 1px consolas";
+                    g.fillStyle = "#000";
+                    g.fillText(chip.type, -.5, -.5 + 1, 1);
+                }
                 g.restore();
             },
         });
@@ -282,6 +299,27 @@ canvas.addEventListener("mousedown", (evtMouseDown: MouseEvent) => {
             window.removeEventListener("mousemove", onMouseMove);
         }, { once: true, });
     }
+    if (tool === "INTERACT" && evtMouseDown.button === 0) {
+        const mousePos = Camera.screenToWorld(Input.mousePosition);
+        const selectedChip = currentBoard.chips.find(chip => {
+            return chip.position.x === Math.floor(mousePos.x) && chip.position.y === Math.floor(mousePos.y);
+        });
+        draggedChip = selectedChip;
+        const onMouseMove = (evtMouseMove: MouseEvent) => {
+            const mousePos = Camera.screenToWorld(Input.mousePosition);
+            if (draggedChip) {
+                draggedChip.position = {
+                    x: Math.floor(mousePos.x),
+                    y: Math.floor(mousePos.y),
+                };
+            }
+        };
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", (evtMoseUp: MouseEvent) => {
+            window.removeEventListener("mousemove", onMouseMove);
+            draggedChip = null;
+        }, { once: true, });
+    }
 });
 canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
     if (tool === "WIRE") {
@@ -305,6 +343,7 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
             }
         }
         if (tool === "DESIGN" && evtMouseUp.button === 2) {
+            console.log(selectedChip.inputChips)
             if (selectedChip.outputChips.length === 0 &&
                 !selectedChip.inputChips.map(x => x ? 1 : 0).includes(1)
             ) {
@@ -369,7 +408,7 @@ $("#importBtn").addEventListener("click", () => {
         alert("An error occurred reading the data.");
     }
 });
-$("#addBtn").addEventListener("click", () => {
+if ($("#addBtn")) $("#addBtn").addEventListener("click", () => {
     let boardName = "";
     do {
         boardName = prompt("Enter board name: ");
