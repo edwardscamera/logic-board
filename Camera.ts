@@ -46,8 +46,8 @@ export default class Camera {
 
     public static rotatePoint(point: Vector2, angle: number): Vector2 {
         angle %= Math.PI * 2;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
+        const cos = Math.cos(angle * -1);
+        const sin = Math.sin(angle * -1);
         return {
             x: (cos * point.x) + (sin * point.y),
             y: (cos * point.y) - (sin * point.x),

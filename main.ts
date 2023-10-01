@@ -158,7 +158,7 @@ const draw = () => {
         // Draw Output Wires
         const centeredOutputPosition = chip.getOutputPosition(0, 2);
         chip.outputChips.forEach(outputChip => {
-            const centeredInputPosition = outputChip.Chip.getInputPosition(outputChip.InputID, 0, -2);
+            const centeredInputPosition = outputChip.Chip.getInputPosition(outputChip.InputID, 0, -.5);
             drawTask.push({
                 sort: 0,
                 task(g) {
@@ -173,11 +173,11 @@ const draw = () => {
         });
 
         drawTask.push({
-            sort: 1,
+            sort: 0,
             task(g) {
                 // Draw Inputs
                 chip.inputs.forEach((input, i) => {
-                    const inputPosition = chip.getInputPosition(i, 0, -1);
+                    const inputPosition = chip.getInputPosition(i, 0, 0);
                     g.fillStyle = input ? "#0f0" : "#aaa";
                     if (tool === "WIRE" && selectedOutputChip && Input.mouseIn(
                         inputPosition.x - chip.outletSize / 2,
@@ -191,11 +191,14 @@ const draw = () => {
                         };
                     }
                     
-                    g.fillRect(
+                    g.beginPath();
+                    g.ellipse(inputPosition.x, inputPosition.y, chip.outletSize / 2, chip.outletSize / 2, 0, 0, Math.PI * 2);
+                    /*g.fillRect(    
                         inputPosition.x - chip.outletSize / 2,
                         inputPosition.y - chip.outletSize / 2,
                         chip.outletSize, chip.outletSize
-                    );
+                    );*/
+                    g.fill();
                 });
 
                 // Draw Output
@@ -367,7 +370,11 @@ $("#importBtn").addEventListener("click", () => {
     }
 });
 $("#addBtn").addEventListener("click", () => {
-    const newBoard = new Board(prompt("Enter board name: "));
+    let boardName = "";
+    do {
+        boardName = prompt("Enter board name: ");
+    } while (!boardName || boardName.trim() === "");
+    const newBoard = new Board(boardName);
     currentBoard = newBoard;
     (<HTMLSpanElement>$("#backBtn")).style.display = "block";
     Chip.Chips[newBoard.name] = {

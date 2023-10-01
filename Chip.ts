@@ -93,6 +93,7 @@ export default class Chip {
         });
     }
     public setOutput(chipInput: ChipInput) {
+        if (!chipInput) return;
         const existingOutput = chipInput.Chip.inputChips[chipInput.InputID] !== null;
         if (existingOutput) {
             const existingChipConnection = chipInput.Chip.inputChips[chipInput.InputID];
