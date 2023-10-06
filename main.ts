@@ -4,7 +4,7 @@ import ChipInput from "./ChipInput.js";
 import Board from "./Board.js";
 import Input from "./Input.js";
 
-const $ = (selector: string) => document.querySelector(selector);
+const $ = (<any>window)["$"] = (selector: string) => document.querySelector(selector);
 const canvas = <HTMLCanvasElement>$("canvas");
 const g: CanvasRenderingContext2D = canvas.getContext("2d");
 let tool: string = "INTERACT";
@@ -63,7 +63,8 @@ window.addEventListener("load", () => {
         chipBtn.classList.add("toolbar-btn", "chip");
         chipBtn.innerHTML = properties.icon ? `<img src="${properties.icon}">` : chipType.toUpperCase();
         if (chipType === selectedBuildChipType) chipBtn.classList.add("selected");
-        chipBtn.addEventListener("click", () => {
+        chipBtn.addEventListener("click", (clickEvt: MouseEvent) => {
+            //if (clickEvt.target !== clickEvt.currentTarget) return;
             const chipBtns = Array.from(document.getElementsByClassName("chip"));
             chipBtns.forEach(btn => btn.classList.remove("selected"));
             chipBtn.classList.add("selected");
